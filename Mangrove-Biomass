@@ -1,0 +1,209 @@
+var roi = 
+    /* color: #45363b */
+    /* shown: false */
+    /* locked: true */
+    ee.Geometry.Polygon(
+        [[[108.71318298339844, -7.566088424293007],
+          [108.71592956542969, -7.784526780401336],
+          [109.08809143066406, -7.787248042348114],
+          [109.08122497558594, -7.56200440099348]]], null, false),
+    imageVisParam = {"opacity":1,"bands":["B3","B2","B1"],"min":17,"max":228,"gamma":3.253},
+    mangrove = ee.ImageCollection("LANDSAT/MANGROVE_FORESTS"),
+    mangrove_2019 = ee.FeatureCollection("users/TA_Alief/mangrove_2019"),
+    mangrove_1990 = ee.FeatureCollection("users/TA_Alief/mangrove_1990"),
+    mangrove_1995 = ee.FeatureCollection("users/TA_Alief/mangrove_1995"),
+    mangrove_2003 = ee.FeatureCollection("users/TA_Alief/mangrove_2003"),
+    L2010 = ee.Image("users/TA_Alief/L7_2010_FillGap"),
+    Ungu = 
+    /* color: #ab16ff */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[108.95372956085207, -7.68639945027487],
+         [109.00798420104984, -7.6633621413683715],
+         [108.9493, -7.71839],
+         [108.86552267990112, -7.662416303123799],
+         [108.85205282936096, -7.692187305703849],
+         [108.99889918518068, -7.683155964491668],
+         [108.95935545501708, -7.704638476816937],
+         [108.8793724761963, -7.714247257587046],
+         [108.7992374603719, -7.6568458187377875],
+         [108.94949616549229, -7.6617213579179]]),
+    Orange = 
+    /* color: #ebaf17 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[108.82360910474041, -7.664098818827216],
+         [108.85189318341982, -7.677529180268121],
+         [108.8978032648684, -7.672058651870179],
+         [108.89557012605225, -7.692644931802272],
+         [108.90629074097109, -7.71031124255677],
+         [108.96308390416422, -7.72112542203986],
+         [108.993215744677, -7.668725021518962],
+         [108.79151530478025, -7.675832660061366],
+         [108.85597964440814, -7.655373245604411],
+         [108.95730835164814, -7.675570307199174]]),
+    Hijau = 
+    /* color: #32ab33 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[108.88706905485502, -7.682083988715623],
+         [108.81061652564142, -7.66541743903723],
+         [108.88753759945627, -7.706133393900114],
+         [108.93853983969966, -7.685786672010566],
+         [109.0065178314718, -7.678483786232391],
+         [109.01557488780962, -7.662512551366663],
+         [108.8647424339324, -7.65480656713878],
+         [108.85261180315885, -7.686457690806137],
+         [108.9710177395879, -7.715164987561672],
+         [108.81518530925585, -7.674302242348529]]),
+    Kuning = 
+    /* color: #fffd2b */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[108.81327557643725, -7.677300664443563],
+         [108.84789405663749, -7.6490118269842435],
+         [108.8177283699496, -7.661620050271542],
+         [108.87620359290506, -7.702561468147323],
+         [108.93036554495613, -7.6854860459979],
+         [108.95414075000528, -7.661175365242861],
+         [109.0158611891084, -7.653847834499653],
+         [108.92033413048132, -7.67918063547664],
+         [108.84396148949872, -7.67722050294501],
+         [108.96556885585116, -7.720383832807408]]),
+    validasi = 
+    /* color: #d63000 */
+    /* locked: true */
+    ee.Geometry.MultiPoint(
+        [[108.953, -7.6854],
+         [109.0091, -7.66467],
+         [108.9493, -7.71839],
+         [108.8646, -7.66567],
+         [108.8526, -7.69156],
+         [108.9995, -7.68356],
+         [108.9336, -7.71187],
+         [108.9606, -7.70601],
+         [108.936, -7.68688],
+         [108.8786, -7.71463]]),
+    error = /* color: #7879d6 */ee.Geometry.MultiPoint(
+        [[108.93600012527087, -7.686873285833771],
+         [108.95299996600725, -7.685395376137653],
+         [108.99950410590746, -7.683547981783311]]);
+
+//Set Map Center
+Map.setCenter(108.904, -7.6832);
+//Parameter Delineasi
+//Map.addLayer(mangrove_1990);
+//Landsat Variable
+  //Landsat 5
+var L1990 = ee.Image('LANDSAT/LT05/C01/T1_TOA/LT05_121065_19900702');
+var L1995 = ee.Image('LANDSAT/LT05/C01/T1_TOA/LT05_121065_19950614');
+  //Landsat 7
+var L2003 = ee.Image('LANDSAT/LE07/C01/T1_TOA/LE07_121065_20030119');
+  //Landsat 8
+var L2019 = ee.Image('LANDSAT/LC08/C01/T1_TOA/LC08_121065_20190702');
+
+//Print Landsat
+//print (L1990,L1995,L2003,L2019,'Landsat Metadata');
+
+//Parameter Rona
+  //TrueColor
+var true_new = ({bands: ['B4', 'B3', 'B2'], 
+    min: 0, 
+    max: 0.5
+});
+var true_mid = ({bands: ['B3', 'B2', 'B1'], 
+    min: 0, 
+    max: 0.5
+});
+
+  //Rona Vegetasi
+var vegPalette = ['3b09d0','171dea','1916f4','ddeec9','13d622','07850b'];
+  //Rona Biomassa
+var biomassPalette = ['1dff24','ff7321','5118ff','e0eb33'];
+  //Color Slice
+var palettes = require('users/gena/packages:palettes');
+var slice = palettes.colorbrewer.RdBu[8];
+//Visualisasi Citra
+  //Landsat 1990
+//Map.addLayer(L1990, true_mid, 'TC 1990');
+  //Landsat 1995
+//Map.addLayer(L1995, true_mid, 'TC 1995');
+  //Landsat 2003
+//Map.addLayer(L2003, true_mid, 'TC 2003');
+  //Landsat 2003
+//Map.addLayer(L2019, true_new, 'TC 2019');
+
+//Transformasi NDVI
+  //Landsat 1990
+var NDVI_L1990 = L1990.normalizedDifference(['B4', 'B3']);
+  //Landsat 1995
+var NDVI_L1995 = L1995.normalizedDifference(['B4', 'B3']);
+  //Landsat 2003
+var NDVI_L2003 = L2003.normalizedDifference(['B4', 'B3']);
+  //Landsat 2010
+var NDVI_L2010 = L2010.normalizedDifference(['B4', 'B3']);
+  //Landsat 2019
+var NDVI_L2019 = L2019.normalizedDifference(['B5', 'B4']);
+
+//Add Layer NDVI
+  //Landsat 1990
+Map.addLayer(NDVI_L1990.clip(mangrove_1990), {min: -1, max: 1, palette: vegPalette}, 'NDVI 1990');
+  //Landsat 1995
+Map.addLayer(NDVI_L1995.clip(mangrove_1995), {min: -1, max: 1, palette: vegPalette}, 'NDVI 1995');
+  //Landsat 2003
+Map.addLayer(NDVI_L2003.clip(mangrove_2003), {min: -1, max: 1, palette: vegPalette}, 'NDVI 2003');
+//Landsat 2003
+//Map.addLayer(NDVI_L2010, {min: -1, max: 1, palette: vegPalette}, 'NDVI 2010');
+  //Landsat 2019
+Map.addLayer(NDVI_L2019.clip(mangrove_2019), {min: -1, max: 1, palette: vegPalette}, 'NDVI 2019');
+
+//Model Biomassa Mangrove Budi (2000)
+  //Landsat 1990
+var biomassa_1990 = L1990.expression(
+       '(30.97183 - (56.898258 * (NDVI))) / (1 + (3.95247 * (NDVI)) - (9.5673017 * ((NDVI) ** 2)))',
+       {'NDVI' : NDVI_L1990.select('nd')  
+        });
+print(biomassa_1990,'Landsat 1990');
+  //Landsat 1995
+var biomassa_1995 = L1995.expression(
+       '(30.97183 - (56.898258 * (NDVI))) / (1 + (3.95247 * (NDVI)) - (9.5673017 * (NDVI ** 2)))',
+       {'NDVI' : NDVI_L1995.select('nd')  
+        });
+print(biomassa_1995,'Landsat 1995');
+  //Landsat 2003
+var biomassa_2003 = L2003.expression(
+       '(30.97183 - (56.898258 * (NDVI))) / (1 + (3.95247 * (NDVI)) - (9.5673017 * (NDVI ** 2)))',
+       {'NDVI' : NDVI_L2003.select('nd')  
+        });
+print(biomassa_2003,'Landsat 2003');
+  //Landsat 2010
+var biomassa_2010 = L2010.expression(
+       '(30.97183 - (56.898258 * (NDVI))) / (1 + (3.95247 * (NDVI)) - (9.5673017 * (NDVI ** 2)))',
+       {'NDVI' : NDVI_L2010.select('nd')  
+        });
+print(biomassa_2010,'Landsat 2010');
+  //Landsat 2019
+var biomassa_2019 = L2019.expression(
+       '(30.97183 - (56.898258 * (NDVI))) / (1 + (3.95247 * (NDVI)) - (9.5673017 * (NDVI ** 2)))',
+       {'NDVI' : NDVI_L2019.select('nd')  
+        });
+print(biomassa_2019,'Landsat 2019');
+
+//Add Layer Biomassa
+Map.addLayer(biomassa_1990.clip(mangrove_1990),{
+    min: 0, max: 20,
+    palette: ['3dce33','fcff21','fbaa17','ff0404']},
+    'Biomassa L1990');
+Map.addLayer(biomassa_1995.clip(mangrove_1995),{
+    min: 0, max: 20,
+    palette: ['3dce33','fcff21','fbaa17','ff0404']},
+    'Biomassa L1995');
+Map.addLayer(biomassa_2003.clip(mangrove_2003),{
+    min: 0, max: 20,
+    palette: ['3dce33','fcff21','fbaa17','ff0404']},
+    'Biomassa L2003');
+Map.addLayer(biomassa_2019.clip(mangrove_2019),{
+    min: 0, max: 20,
+    palette: ['3dce33','fcff21','fbaa17','ff0404']},
+    'Biomassa L2019');
+
