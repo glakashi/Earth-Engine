@@ -1,0 +1,637 @@
+var sea = ee.FeatureCollection("users/TA_Alief/sea"),
+    WC = ee.Image("OpenLandMap/SOL/SOL_WATERCONTENT-33KPA_USDA-4B1C_M/v01"),
+    OC = ee.Image("OpenLandMap/SOL/SOL_ORGANIC-CARBON_USDA-6A1C_M/v02"),
+    BD = ee.Image("OpenLandMap/SOL/SOL_BULKDENS-FINEEARTH_USDA-4A1H_M/v02"),
+    PH = ee.Image("OpenLandMap/SOL/SOL_PH-H2O_USDA-4C1A2A_M/v02"),
+    aoi = 
+    /* color: #53ff8c */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[91.0065439815484, 28.689383799241536],
+          [91.0065439815484, -11.107203249445654],
+          [140.93637192845966, -11.107203249445654],
+          [140.93637192845966, 28.689383799241536]]], null, false),
+    geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[94.37064670800987, 5.900013786413902],
+          [94.37064670800987, -6.031485674392017],
+          [106.21390842675987, -6.031485674392017],
+          [106.21390842675987, 5.900013786413902]]], null, false),
+    tyield = ee.Image("users/TA_Alief/GAEZAct2015_HarvArea_Oilpalmfruit_Total"),
+    Palm = ee.Image("users/TA_Alief/PalmNew"),
+    t1 = ee.FeatureCollection("users/TA_Alief/TrainingDataNew"),
+    t2 = ee.FeatureCollection("users/TA_Alief/TraningDataLowYield"),
+    t3 = ee.FeatureCollection("users/TA_Alief/TrainingData_2"),
+    t4 = ee.FeatureCollection("users/TA_Alief/TrainingData_LowYield_1"),
+    NL = ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG"),
+    trainingData = ee.FeatureCollection("users/TA_Alief/TrainingData_500"),
+    traininglow = ee.FeatureCollection("users/TA_Alief/TrainingData_LowYield_500"),
+    TCWPParam = {"opacity":1,"bands":["scale"],"min":-4.537361140396238e-12,"max":8.895524333377661e-11,"palette":["0409f1","02e3f1","3cf104","f1f1f1","ebf100","f13a00","b60505"]},
+    TCNLParam = {"opacity":1,"bands":["scale"],"min":-7.232106549441503e-12,"max":1.2206855291991153e-11,"palette":["0409f1","02e3f1","3cf104","f1f1f1","ebf100","f13a00","b60505"]},
+    TCLSTParam = {"opacity":1,"bands":["scale"],"min":-1.5886972361111267e-11,"max":1.485887244296096e-11,"palette":["0409f1","02e3f1","3cf104","f1f1f1","ebf100","f13a00","b60505"]},
+    TCAODParam = {"opacity":1,"bands":["scale"],"min":-6.097625371699673e-10,"max":1.319124444085431e-9,"palette":["0409f1","02e3f1","3cf104","f1f1f1","ebf100","f13a00","b60505"]};
+
+//=====================================PROJECTION======================================================================
+var proj = ee.Projection('EPSG:4326');
+var tyield_Mask = tyield.mask(Palm);
+//Map.addLayer(sea,{},'Boundry',false);
+Map.addLayer(trainingData,{},'Yield Tinggi',false);
+Map.addLayer(traininglow,{},'Yield Rendah',false);
+Map.addLayer(tyield_Mask,{min: 0.01,max: 4.5,
+  palette: ['3dce33','fcff21','fbaa17','ff0404']},'Total Yield', false);
+//=====================================================================================================================
+var DEMdataset = ee.Image("USGS/SRTMGL1_003"); 
+var DEM = DEMdataset.select('elevation').updateMask(Palm);
+var slope = ee.Terrain.slope(DEM).updateMask(Palm).rename('Slope');
+var slopevis = {min:0, max:60};
+//Map.addLayer (slope.clip(sea), slopevis, "Kemiringan Lereng", false);
+
+var DEMreclass = ee.Image(1)
+          .where(DEM.gt(0).and(DEM.lte(500)), 5)
+          .where(DEM.gt(500).and(DEM.lte(1000)), 4)
+          .where(DEM.gt(1000).and(DEM.lte(1500)), 3)
+          .where(DEM.gt(1500).and(DEM.lte(2000)), 2)
+          .where(DEM.gt(2000).and(DEM.lte(2500)), 1)
+          .updateMask(Palm);
+var slopereclass = ee.Image(1)
+          .where(slope.gt(0).and(slope.lte(8)), 5)
+          .where(slope.gt(8).and(slope.lte(16)), 4)
+          .where(slope.gt(16).and(slope.lte(30)), 3)
+          .where(slope.gt(30).and(slope.lte(50)), 2)
+          .where(slope.gt(50).and(slope.lte(90)),1)
+          .updateMask(Palm);
+
+  
+var intervals2 =
+  '<RasterSymbolizer>' +
+    '<ColorMap type="intervals" extended="false" >' +
+      '<ColorMapEntry color="#0000ff" quantity="1" label="1"/>' +
+      '<ColorMapEntry color="#00ff00" quantity="2" label="2" />' +
+      '<ColorMapEntry color="#ffff00" quantity="3" label="3" />' +
+      '<ColorMapEntry color="#ff0000" quantity="4" label="4" />' +
+      '<ColorMapEntry color="#000000" quantity="5" label="5" />' +
+    '</ColorMap>' +
+  '</RasterSymbolizer>';
+
+var DEM_classified = DEMreclass.sldStyle(intervals2).clip(sea);
+//Map.addLayer(DEMreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi DEM',false);
+
+var slope_classified = slopereclass.sldStyle(intervals2).clip(sea);
+//Map.addLayer(slopereclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Slope',false);
+//=========================================END OF DEM RECLASS=========================================================
+
+//=====================================================================================================================
+var modis = ee.ImageCollection('MODIS/061/MOD13Q1')
+                  .filter(ee.Filter.date('2020-01-01', '2020-12-31'))
+                  .mean();
+var ndvi = modis.select('NDVI').multiply(0.0001).updateMask(Palm);
+var evi = modis.select('EVI').multiply(0.0001).updateMask(Palm);
+
+var NDVIreclass = ee.Image(1)
+          .where(ndvi.gt(0.201834).and(ndvi.lte(0.690999)), 1)
+          .where(ndvi.gt(0.690999).and(ndvi.lte(0.7270644)), 2)
+          .where(ndvi.gt(0.7270644).and(ndvi.lte(0.7559167)), 3)
+          .where(ndvi.gt(0.7559167).and(ndvi.lte(0.7883755)), 4)
+          .where(ndvi.gt(0.7883755).and(ndvi.lte(0.93985)), 5)
+          .updateMask(Palm);
+var EVIreclass = ee.Image(1)
+          .where(evi.gt(-0.015199).and(evi.lte(0.4819536)), 1)
+          .where(evi.gt(0.4819536).and(evi.lte(0.5163478)), 2)
+          .where(evi.gt(0.5163478).and(evi.lte(0.5444886)), 3)
+          .where(evi.gt(0.5444886).and(evi.lte(0.5757561)), 4)
+          .where(evi.gt(0.5757561).and(evi.lte(0.7821217)),5)
+          .updateMask(Palm);
+
+  
+var intervals2 =
+  '<RasterSymbolizer>' +
+    '<ColorMap type="intervals" extended="false" >' +
+      '<ColorMapEntry color="#0000ff" quantity="1" label="1"/>' +
+      '<ColorMapEntry color="#00ff00" quantity="2" label="2" />' +
+      '<ColorMapEntry color="#ffff00" quantity="3" label="3" />' +
+      '<ColorMapEntry color="#ff0000" quantity="4" label="4" />' +
+      '<ColorMapEntry color="#000000" quantity="5" label="5" />' +
+    '</ColorMap>' +
+  '</RasterSymbolizer>';
+
+var DEM_classified = DEMreclass.sldStyle(intervals2).clip(sea);
+//Map.addLayer(DEMreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi DEM',false);
+
+var slope_classified = slopereclass.sldStyle(intervals2).clip(sea);
+//Map.addLayer(slopereclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Slope',false);
+//=========================================END OF NDVI EVI RECLASS=========================================================
+
+//=====================================================================================================================
+var Gross = ee.ImageCollection('MODIS/006/MOD17A2H')
+                  .filter(ee.Filter.date('2020-01-01', '2020-12-31')).mean();
+var gpp = Gross.select('Gpp').multiply(0.0001);
+var Ra = gpp.multiply(0.45);
+var npp = gpp.subtract(Ra).rename('NPP');
+//=========================================END OF GPP NPP RECLASS=========================================================
+
+//=====================================================================================================================
+var evapo = ee.ImageCollection("MODIS/006/MOD16A2") 
+                  .select('ET')
+                  .filterDate('2020-01-01', '2020-12-31')
+                  .mean().multiply(0.1);
+//=========================================END OF EVAPO RECLASS=========================================================
+
+//=====================================================================================================================
+var LSTdataset = ee.ImageCollection('MODIS/061/MOD11A1')
+                .select('LST_Day_1km')
+                .filter(ee.Filter.date('2020-01-01', '2020-12-31'))
+                .mean();
+var rescale = LSTdataset.multiply(0.02).subtract(273).updateMask(Palm).rename('TempCel'); //Celcius
+
+
+var tempreclass = ee.Image(1) 
+          .where(rescale.gt(21.029).and(rescale.lte(28.605)), 1)
+          .where(rescale.gt(28.605).and(rescale.lte(29.155)), 2)
+          .where(rescale.gt(29.155).and(rescale.lte(29.706)), 3)
+          .where(rescale.gt(29.706).and(rescale.lte(30.326)), 4)
+          .where(rescale.gt(30.327).and(rescale.lte(38.591)), 5)
+          .updateMask(Palm);
+var lstreclass = ee.Image(1) 
+          .where(rescale.gt(21.029).and(rescale.lte(28.605)), 1)
+          .where(rescale.gt(28.605).and(rescale.lte(29.155)), 2)
+          .where(rescale.gt(29.155).and(rescale.lte(29.706)), 3)
+          .where(rescale.gt(29.706).and(rescale.lte(30.326)), 4)
+          .where(rescale.gt(30.327).and(rescale.lte(38.591)), 5)
+          .updateMask(Palm);
+/*/var lstreclass = ee.Image(1) 
+          .where(rescale.gt(0).and(rescale.lte(8.336612873)), 5)
+          .where(rescale.gt(8.336612873).and(rescale.lte(15.73503001)), 4)
+          .where(rescale.gt(15.73503001).and(rescale.lte(20.21891918)), 3)
+          .where(rescale.gt(20.21891918).and(rescale.lte(24.70280835)), 2)
+          .where(rescale.gt(24.70280835).and(rescale.lte(37.70608696)), 1)
+          .updateMask(Palm);/*/ //Reclass Lama
+
+var intervals1 =
+  '<RasterSymbolizer>' +
+    '<ColorMap type="intervals" extended="false" >' +
+      '<ColorMapEntry color="#0000ff" quantity="1" label="1"/>' +
+      '<ColorMapEntry color="#00ff00" quantity="2" label="2" />' +
+      '<ColorMapEntry color="#ffff00" quantity="3" label="3" />' +
+      '<ColorMapEntry color="#ff0000" quantity="4" label="4" />' +
+      '<ColorMapEntry color="#000000" quantity="5" label="5" />' +
+    '</ColorMap>' +
+  '</RasterSymbolizer>';
+  
+var temp_classified = tempreclass.sldStyle(intervals1);
+//Map.addLayer(tempreclass.sldStyle(intervals1).clip(sea),{},'Klasifikasi LST',false);
+//=========================================END OF LST RECLASS=========================================================
+var WCDataset = WC.select('b100').updateMask(Palm).rename('Water');
+var BDDataset = BD.select('b100').multiply(10).updateMask(Palm).rename('Bulk');
+var PHDataset = PH.select('b100').multiply(10).updateMask(Palm).rename('PH');
+var OCDataset = OC.select('b100').multiply(5).updateMask(Palm).rename('Carbon');
+
+var WCreclass = ee.Image(1)
+          .where(WCDataset.gt(0).and(WCDataset.lte(32)), 1)
+          .where(WCDataset.gt(32).and(WCDataset.lte(36)), 2)
+          .where(WCDataset.gt(39).and(WCDataset.lte(39)), 3)
+          .where(WCDataset.gt(39).and(WCDataset.lte(43)), 4)
+          .where(WCDataset.gt(43).and(WCDataset.lte(96)), 5)
+          .updateMask(Palm);
+var BDreclass = ee.Image(1)
+          .where(BDDataset.gt(0).and(BDDataset.lte(1008.941176)), 1)
+          .where(BDDataset.gt(1008.941176).and(BDDataset.lte(1189.647059)), 2)
+          .where(BDDataset.gt(1189.647059).and(BDDataset.lte(1280)), 3)
+          .where(BDDataset.gt(1280).and(BDDataset.lte(1370.352941)), 4)
+          .where(BDDataset.gt(1370.352941).and(BDDataset.lte(1920)), 5)
+          .updateMask(Palm);
+var PHreclass = ee.Image(1)
+          .where(PHDataset.gt(0).and(PHDataset.lte(510)), 1)
+          .where(PHDataset.gt(510).and(PHDataset.lte(540)), 2)
+          .where(PHDataset.gt(540).and(PHDataset.lte(570)), 3)
+          .where(PHDataset.gt(570).and(PHDataset.lte(670)), 4)
+          .where(PHDataset.gt(670).and(PHDataset.lte(1050)), 5)
+          .updateMask(Palm);         
+var OCreclass = ee.Image(1)
+          .where(OCDataset.gt(0).and(OCDataset.lte(35)), 1)
+          .where(OCDataset.gt(35).and(OCDataset.lte(115)), 2)
+          .where(OCDataset.gt(115).and(OCDataset.lte(225)), 3)
+          .where(OCDataset.gt(225).and(OCDataset.lte(355)), 4)
+          .where(OCDataset.gt(355).and(OCDataset.lte(600)), 5)
+          .updateMask(Palm); 
+          
+var WC_classified = WCreclass.sldStyle(intervals2).clip(sea);
+//Map.addLayer(WCreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Water Content',false);
+var BD_classified = BDreclass.sldStyle(intervals2).clip(sea);  
+//Map.addLayer(BDreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Bulk Density',false);
+var PH_classified = PHreclass.sldStyle(intervals2).clip(sea);  
+//Map.addLayer(PHreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Ph',false);
+var OC_classified = OCreclass.sldStyle(intervals2).clip(sea);  
+//Map.addLayer(OCreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Organic Carbon',false);
+//=========================================END OF SOIL RECLASS=========================================================
+
+//=====================================================================================================================
+var pr = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE')
+                  .select('pr')
+                  .filterDate('2020-01-01', '2020-12-31')
+                  .mean().updateMask(Palm);
+var precipitationVis = {
+  min: -1000,
+  max: 1000,
+  palette: ['fdffb4','ffffd9','edf8b1','c7e9b4','7fcdbb','41b6c4',
+    '1d91c0','225ea8','253494','081d58'],
+};
+//Map.addLayer(pr, precipitationVis, 'Precipitation',false);
+var prreclass = ee.Image(1)
+          .where(pr.gt(31.08333333).and(pr.lte(132.7343137)), 1)
+          .where(pr.gt(132.7343137).and(pr.lte(201.2382353)), 2)
+          .where(pr.gt(201.2382353).and(pr.lte(267.5323529)), 3)
+          .where(pr.gt(267.5323529).and(pr.lte(340.4558824)), 4)
+          .where(pr.gt(340.4558824).and(pr.lte(594.5833333)), 5)
+          .updateMask(Palm);
+var pr_classified = prreclass.sldStyle(intervals2).clip(sea);  
+//Map.addLayer(prreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Precipitation 2020',false);
+//=========================================END OF PRECIPITATION RECLASS====================================================
+
+//=====================================================================================================================
+var PopDens = ee.ImageCollection("WorldPop/GP/100m/pop")
+          .filter(ee.Filter.date('2020-01-01', '2020-12-31')).mean().updateMask(Palm);
+
+/*/var visualization = {
+  bands: ['population'],
+  min: 0.0,
+  max: 50.0,
+  palette: ['24126c', '1fff4f', 'd4ff50']
+};/*/
+var popdensreclass = ee.Image(1)
+          .where(PopDens.lte(1.412), 1)
+          .where(PopDens.gt(1.412).and(PopDens.lte(2.824)), 2)
+          .where(PopDens.gt(2.824).and(PopDens.lte(5.647)), 3)
+          .where(PopDens.gt(5.647).and(PopDens.lte(306.59)), 4)
+          .where(PopDens.gt(306.59), 5)
+          .updateMask(Palm);
+var PDreclass = ee.Image(1)
+          .where(PopDens.lte(1.412), 5)
+          .where(PopDens.gt(1.412).and(PopDens.lte(2.824)), 4)
+          .where(PopDens.gt(2.824).and(PopDens.lte(5.647)), 3)
+          .where(PopDens.gt(5.647).and(PopDens.lte(306.59)), 2)
+          .where(PopDens.gt(306.59), 1)
+          .updateMask(Palm);
+var PopDens_classified = popdensreclass.sldStyle(intervals2).clip(sea);
+Map.addLayer(popdensreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Populasi',false);
+//=========================================END OF POP DENS RECLASS====================================================
+
+//=====================================================================================================================
+var viirs = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')
+                  .filter(ee.Filter.date('2020-01-01', '2020-12-31')).mean();
+var nighttime = viirs.select('avg_rad').updateMask(Palm);
+var nighttimeVis = {min: 0.0, max: 60.0};
+//Map.addLayer(nighttime, nighttimeVis, 'Nighttime');
+var nightreclass = ee.Image(1)
+          .where(nighttime.lte(0), 1)
+          .where(nighttime.gt(0).and(nighttime.lte(0.166)), 2)
+          .where(nighttime.gt(0.166).and(nighttime.lte(1.373)), 3)
+          .where(nighttime.gt(1.373).and(nighttime.lte(3.786)), 4)
+          .where(nighttime.gt(3.787).and(nighttime.lte(306.59)), 5)
+          .updateMask(Palm);
+var night_classified = nightreclass.sldStyle(intervals2).clip(sea);
+Map.addLayer(nightreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi Night',false);
+//=========================================END OF VIRS====================================================
+//=====================================================================================================================
+var AOD = ee.ImageCollection('MODIS/061/MCD19A2_GRANULES')
+                  .select('Optical_Depth_047')
+                  .filterDate('2020-01-01', '2020-12-31').mean().updateMask(Palm).multiply(0.001)
+                  .rename('aod');
+
+var band_viz = {
+  min: 0,
+  max: 500,
+  palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']
+};
+
+//Map.addLayer(collection.mean(), band_viz, 'Optical Depth 047');
+var aodreclass = ee.Image(1)
+          .where(AOD.gt(19.001).and(AOD.lte(204.212)), 5)
+          .where(AOD.gt(204.212).and(AOD.lte(232.706)), 4)
+          .where(AOD.gt(232.706).and(AOD.lte(256.451)), 3)
+          .where(AOD.gt(256.451).and(AOD.lte(284.945)), 2)
+          .where(AOD.gt(284.945).and(AOD.lte(1230)), 1)
+          .updateMask(Palm);
+var aod_classified = aodreclass.sldStyle(intervals2).clip(sea);
+Map.addLayer(aodreclass.sldStyle(intervals2).clip(sea),{},'Klasifikasi AOD',false);
+//=========================================END OF AOD====================================================
+
+//=====================================================================================================================
+var param = {min:1, max:37};
+//Map.addLayer(Palm,param,'Kelapa Sawit',false);
+var visparams = {
+   "opacity": 1,
+    "min": 0,
+    "max": 1,
+    "palette": ["FFFFFF", "000000"]
+};
+var palmreclass = ee.Image(0)
+              .where(Palm.eq(0),0)
+              .where(Palm.gte(1).and(Palm.lte(37)),1)
+              .updateMask(Palm);
+//Map.addLayer(palmreclass.clip(sea), visparams, 'Klasifikasi Kelapa Sawit',false);
+//=========================================END OF PALM OIL RECLASS=========================================================
+
+//=====================================================================================================================
+var palettes = require('users/gena/packages:palettes');
+var palette = palettes.colorbrewer.Paired[50];
+var visHasil = {min: 1,max: 50,
+  palette: ['3dce33','fcff21','fbaa17','ff0404']};
+var Cal_Parameter = slopereclass.add(DEMreclass).add(tempreclass).add(prreclass).add(BDreclass).add(PHreclass)
+                    .add(WCreclass).add(OCreclass).add(NDVIreclass).add(EVIreclass);
+var KS_Optimal = Cal_Parameter.updateMask(Palm);
+Map.addLayer(Cal_Parameter,{min:1,max:100},'Penjumlahan Parameter',false);
+Map.addLayer(KS_Optimal.clip(sea),visHasil,'Hasil 1',false);
+print(KS_Optimal);
+//=========================================END OF RECLASS CALCULATION=========================================================
+
+//=====================================================================================================================
+var socioeconomy = nightreclass.add(popdensreclass);
+var envipressure = aodreclass.add(lstreclass);
+//=========================================ANALYSIS PARAMETER==================================================
+
+/*/=====================================================================================================================
+var dataset = ee.ImageCollection('WorldPop/GP/100m/pop')
+              .map(function(image){return image.updateMask(Palm)});          
+var PI = dataset.map(function(image) {
+  var plastic_index = image.expression(
+    'band', {'band': image.select('population')})
+.rename('PI');
+return image.addBands(plastic_index);
+});
+var createTimeBand = function(image) {
+  return image.addBands(image.metadata('system:time_start'));};
+var collection = PI
+  .filterDate(ee.Date('2016-01-01'), ee.Date('2021-12-31'))
+  .map(createTimeBand);
+var linearFit_WP = collection.select(['system:time_start', 'PI'])
+  .reduce(ee.Reducer.linearFit());
+Map.addLayer(linearFit_WP,
+  {min: -4.537361140396238e-12, max: 8.895524333377661e-11, palette: ["0409f1","02e3f1","3cf104","f1f1f1", "ebf100","f13a00","b60505"], bands: ['scale']}, 'TC WP',false);
+  //################2
+var dataset = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')
+              .map(function(image){return image.updateMask(Palm)});          
+var PI = dataset.map(function(image) {
+  var plastic_index = image.expression(
+    '(SWIR)', {'SWIR': image.select('avg_rad')})
+.rename('PI');
+return image.addBands(plastic_index);
+});
+var createTimeBand = function(image) {
+  return image.addBands(image.metadata('system:time_start'));};
+var collection = PI
+  .filterDate(ee.Date('2016-01-01'), ee.Date('2021-12-31'))
+  .map(createTimeBand);
+var linearFit_NL = collection.select(['system:time_start', 'PI'])
+  .reduce(ee.Reducer.linearFit());
+// Map.addLayer(linearFit,
+//   {min: 0, max: [-0.9, 8e-5, 1], bands: ['scale', 'offset', 'scale']}, 'fit'); 
+Map.addLayer(linearFit_NL,
+  {min: -6.94, max: 8.633, palette: ["0409f1","02e3f1","3cf104","f1f1f1", "ebf100","f13a00","b60505"], bands: ['scale']}, 'TC NL',false);
+//##################3
+var dataset = ee.ImageCollection('MODIS/061/MCD19A2_GRANULES')
+              .map(function(image){return image.updateMask(Palm)});          
+var PI = dataset.map(function(image) {
+  var plastic_index = image.expression(
+    '(AOD*0.001)', {'AOD': image.select('Optical_Depth_047')})
+.rename('PI');
+return image.addBands(plastic_index);
+});
+var createTimeBand = function(image) {
+  return image.addBands(image.metadata('system:time_start'));};
+var collection = PI
+  .filterDate(ee.Date('2016-01-01'), ee.Date('2021-12-31'))
+  .map(createTimeBand);
+var linearFit_AOD = collection.select(['system:time_start', 'PI'])
+  .reduce(ee.Reducer.linearFit());
+// Map.addLayer(linearFit,
+//   {min: 0, max: [-0.9, 8e-5, 1], bands: ['scale', 'offset', 'scale']}, 'fit'); 
+Map.addLayer(linearFit_AOD,
+  {min: -6.94, max: 8.633, palette: ["0409f1","02e3f1","3cf104","f1f1f1", "ebf100","f13a00","b60505"], bands: ['scale']}, 'TC AOD',false);
+//####################4
+var dataset = ee.ImageCollection('MODIS/061/MOD11A1')
+              .map(function(image){return image.updateMask(Palm)});          
+var PI = dataset.map(function(image) {
+  var plastic_index = image.expression(
+    '((band*0.02)-273)', {'band': image.select('LST_Day_1km')})
+.rename('PI');
+return image.addBands(plastic_index);
+});
+var createTimeBand = function(image) {
+  return image.addBands(image.metadata('system:time_start'));};
+var collection = PI
+  .filterDate(ee.Date('2016-01-01'), ee.Date('2021-12-31'))
+  .map(createTimeBand);
+var linearFit_LST = collection.select(['system:time_start', 'PI'])
+  .reduce(ee.Reducer.linearFit());
+// Map.addLayer(linearFit,
+//   {min: 0, max: [-0.9, 8e-5, 1], bands: ['scale', 'offset', 'scale']}, 'fit'); 
+Map.addLayer(linearFit_LST,
+  {min: -6.94, max: 8.633, palette: ["0409f1","02e3f1","3cf104","f1f1f1", "ebf100","f13a00","b60505"], bands: ['scale']}, 'TC LST',false);
+//=========================================ANALYSIS TREND CHANGE==================================================
+/*/
+//===========================================================================================================
+var gabung =  DEM.addBands(slope)
+              .addBands(rescale)
+              .addBands(WCDataset)
+              .addBands(BDDataset)
+              .addBands(PHDataset)
+              .addBands(OCDataset)
+              .addBands(pr)
+              .addBands(ndvi)
+              .addBands(evi)
+              .addBands(evapo)
+var bands = ['elevation','Slope', 'TempCel','Water','Bulk','PH','Carbon','pr','NDVI','EVI','ET']; 
+var samples= trainingData.merge(traininglow);
+
+var input = gabung.select(bands);
+var points = input.sampleRegions({
+  collection:samples ,
+  properties: ['Suitable'],
+  scale: 100
+}).randomColumn();
+print(points);
+
+//Randomly Split data to 70% train and 30% test
+var split = 0.7;
+var training  = points.filter(ee.Filter.lt('random', split));
+var testing  = points.filter(ee.Filter.gte('random', split));
+ 
+//Print all samples
+print('Samples n =', points.aggregate_count('.all'));
+print('Training n =', training.aggregate_count('.all'));
+print('Testing n =', testing.aggregate_count('.all'));
+
+//RandomForest Classification
+var classifier  = ee.Classifier.smileRandomForest(2000,8).train({
+  features  : training,
+  classProperty: 'Suitable',
+  inputProperties: bands
+});
+
+//RandomForest Classification
+var classified  = input.classify(classifier);
+var ClassifierPr = classifier.setOutputMode('PROBABILITY').train(points, 'Suitable', bands); 
+var ClassifiedImgPrRF = input.select(bands).classify(ClassifierPr);
+var finalimage  = ClassifiedImgPrRF.blend(classifier);
+
+var imageVisParam = {"opacity":1,"bands":["classification"],"min":0,"palette":["1b00ff","00fff3","00ff1f","e4ff00","ff7600","ff0000","ca0000"]};
+var classifiedVis = {
+  min: 0,
+  max: 5,
+  palette: ['gray','yellow','red','blue','orange'],
+};
+
+Map.addLayer(ClassifiedImgPrRF,imageVisParam,'RF fraction', false);
+
+//===========================================END OF RANDOM FOREST======================================================
+//=====================================================================================================================
+var dict = classifier.explain();
+print('Explain:',dict);
+ var variable_importance = ee.Feature(null, ee.Dictionary(dict).get('importance'));
+ var chart =
+ui.Chart.feature.byProperty(variable_importance)
+.setChartType('ColumnChart')
+.setOptions({
+title: 'Random Forest Variable Importance',
+legend: {position: 'none'},
+hAxis: {title: 'Bands'},
+vAxis: {title: 'Importance'}
+});
+ print(chart);
+ 
+ // Sample input pClassifiedImgPrSVMoints.
+var trainingData = ClassifiedImgPrRF.reduceRegions(trainingData,ee.Reducer.mean().setOutputs(['ClassifiedImgPrRF']),1000).map(function(x){return x.set('is_target',1);});
+var traininglow = ClassifiedImgPrRF.reduceRegions(traininglow,ee.Reducer.mean().setOutputs(['ClassifiedImgPrRF']),1000).map(function(x){return x.set('is_target',0);});
+var samples = trainingData.merge(traininglow);
+
+print(trainingData.aggregate_array('ClassifiedImgPrRF'),'Suitable');
+print(traininglow.aggregate_array('ClassifiedImgPrRF'),'Unsuitable');
+
+
+// Calculate the Receiver Operating Characteristic (ROC) curve
+// -----------------------------------------------------------
+
+// Chance these as needed
+var ROC_field_RF = 'ClassifiedImgPrRF', ROC_min = 0, ROC_max = 4, ROC_steps = 500, ROC_points = samples
+
+var ROC_RF = ee.FeatureCollection(ee.List.sequence(ROC_min, ROC_max, null, ROC_steps).map(function (cutoff) {
+  var target_roc_RF = ROC_points.filterMetadata('is_target','equals',1)
+  // true-positive-rate, sensitivity  
+  var TPR_RF = ee.Number(target_roc_RF.filterMetadata(ROC_field_RF,'greater_than',cutoff).size()).divide(target_roc_RF.size()) 
+  var non_target_roc_RF = ROC_points.filterMetadata('is_target','equals',0)
+  // true-negative-rate, specificity  
+  var TNR_RF = ee.Number(non_target_roc_RF.filterMetadata(ROC_field_RF,'less_than',cutoff).size()).divide(non_target_roc_RF.size()) 
+  return ee.Feature(null,{cutoff: cutoff, TPR_RF: TPR_RF, TNR_RF: TNR_RF, FPR_RF:TNR_RF.subtract(1).multiply(-1),  dist:TPR_RF.subtract(1).pow(2).add(TNR_RF.subtract(1).pow(2)).sqrt()})
+}))
+// Use trapezoidal approximation for area under curve (AUC)
+var X_RF = ee.Array(ROC_RF.aggregate_array('FPR_RF')), 
+    Y_RF = ee.Array(ROC_RF.aggregate_array('TPR_RF')), 
+    Xk_m_Xkm1_RF = X_RF.slice(0,1).subtract(X_RF.slice(0,0,-1)),
+    Yk_p_Ykm1_RF = Y_RF.slice(0,1).add(Y_RF.slice(0,0,-1)),
+    AUC_RF = Xk_m_Xkm1_RF.multiply(Yk_p_Ykm1_RF).multiply(0.5).reduce('sum',[0]).abs().toList().get(0)
+print(AUC_RF,'AUC')
+// Plot the ROC curve
+print(ui.Chart.feature.byFeature(ROC_RF, 'FPR_RF', 'TPR_RF').setOptions({
+      title: 'ROC_RF curve',
+      legend: 'none',
+      hAxis: { title: 'False-positive-rate'},
+      vAxis: { title: 'True-negative-rate'},
+      lineWidth: 1}));
+
+var predCor = gabung.sample({
+  region: sea,
+   scale: 100,
+   numPixels: 500,
+   geometries: true});  
+var pixelValues = gabung.sampleRegions({
+   collection: predCor,
+   scale: 100,
+   tileScale: 16 });
+  
+// // Check all pairwise correlataion by mapping the reduceColumns function across all pairwise
+ var corrAll = gabung.bandNames().map(function(i){
+   var tmp1 = gabung.bandNames().map(function(j){
+     var tmp2 = pixelValues.reduceColumns({
+       reducer: ee.Reducer.spearmansCorrelation(),
+       selectors: [i, j]
+    });
+     return tmp2.get('correlation');
+   });
+   return tmp1;
+ });
+ print('Variables correlation matrix', corrAll);
+//=========================================PRINT AND EXPORTING=========================================================
+
+//=====================================================================================================================
+/*/Export.image.toDrive({
+  image: ClassifiedImgPrRF,
+  description: 'RF fraction',
+  scale: 30,
+  region: aoi,
+  fileFormat: 'GeoTIFF',
+  maxPixels: 1e13,
+  formatOptions: {
+    cloudOptimized: true
+  }
+});
+Export.image.toDrive({
+  image:linearFit_AOD.visualize(TCAODParam),
+  description: 'TCAOD',
+  fileNamePrefix: 'TCAOD',
+  region: aoi,
+  fileFormat: 'GeoTIFF',
+  maxPixels: 1e13
+});
+ Export.image.toDrive({
+  image:linearFit_LST.visualize(TCLSTParam),
+  description: 'TCLST',
+  fileNamePrefix: 'TCLST',
+  region: aoi,
+  fileFormat: 'GeoTIFF',
+  maxPixels: 1e13
+});/*/
+/*/Export.image.toDrive({
+  image: linearFit_LST,
+  description: 'LST',
+  folder: 'UrbanSprawl_New',
+  scale: 1000,
+  maxPixels: 1000000000,
+  fileFormat: 'GeoTIFF'
+});
+Export.image.toDrive({
+  image: linearFit_AOD,
+  description: 'AOD',
+  folder: 'UrbanSprawl_New',
+  scale: 1000,
+  maxPixels: 1000000000,
+  fileFormat: 'GeoTIFF'
+});
+Export.image.toDrive({
+  image: linearFit_WP,
+  description: 'WP',
+  folder: 'UrbanSprawl_New',
+  scale: 1000,
+  maxPixels: 1000000000,
+  fileFormat: 'GeoTIFF'
+});
+Export.image.toDrive({
+  image: linearFit_NL,
+  description: 'NL',
+  folder: 'UrbanSprawl_New',
+  scale: 1000,
+  maxPixels: 1000000000,
+  fileFormat: 'GeoTIFF'
+});/*/
+
