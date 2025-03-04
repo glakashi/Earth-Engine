@@ -1,0 +1,50 @@
+var Landsat = ee.ImageCollection("LANDSAT/LC09/C02/T1_TOA"),
+    ROI = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[107.12288805618391, -6.332265705379423],
+          [107.10675188675032, -6.3930007308703996],
+          [107.13181444778547, -6.43257698228728],
+          [107.2485441841136, -6.472150151898324],
+          [107.26777025833235, -6.43360046522956],
+          [107.30141588821516, -6.3906124106150415],
+          [107.2928328193675, -6.359222023924235],
+          [107.27463671341047, -6.333630616144727],
+          [107.22588488235579, -6.329194642965979],
+          [107.17472979202375, -6.323734931377127]]]);
+====Mencari Dataset Manually========
+/*/var L2023 = ee.ImageCollection(Landsat
+              .filterDate('2023-01-01','2023-12-20')
+              .filterBounds(ROI)
+              .sort('CLOUD_COVER')
+              .first());/*/
+//DATA YANG DIPAKAI
+var Data = ee.Image('LANDSAT/LC09/C02/T1_TOA/LC09_122064_20230712');
+var trueColor432 = Data.select(['B4', 'B3', 'B2']);
+var trueColor432Vis = {
+  min: 0.0,
+  max: 0.4,
+};
+Map.addLayer(trueColor432.clip(ROI), trueColor432Vis,'True Color Bekasi');
+//NDVI Tradisional
+var nir = Data.select('B5');
+var red = Data.select('B4');
+var ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI');
+var ndviParams = {
+   min: -1, 
+   max: 1, 
+   palette: [  'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718', '74A901',
+    '66A000', '529400', '3E8601', '207401', '056201', '004C00', '023B01',
+    '012E01', '011D01', '011301']};
+Map.addLayer(ndvi.clip(ROI), ndviParams,'NDVI Bekasi Tahun 2023');
+
+Export.image.toDrive({
+  image: ndvi,
+  description: 'NDVI 2023',
+  folder : 'GEE PRAKTIKUM',
+  region : ROI,
+  scale: 30,
+  maxPixels: 1e13, 
+  fileFormat : 'GeoTIFF'
+});
