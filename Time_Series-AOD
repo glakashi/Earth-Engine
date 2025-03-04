@@ -1,0 +1,41 @@
+var Palm = ee.Image("users/TA_Alief/PalmNew"),
+    sea = ee.FeatureCollection("users/TA_Alief/sea"),
+    modis = ee.ImageCollection("MODIS/061/MCD19A2_GRANULES"),
+    aoi = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[102.74280680322379, 1.9209147144996248],
+          [102.86366046978748, 1.8083612224933412],
+          [103.04768957971223, 1.7410977138171597],
+          [103.22347385009049, 1.8385585750338391],
+          [103.05799782264005, 1.992288763791089],
+          [102.92820752171801, 2.0691461862719946],
+          [102.8073533238077, 2.0375788684880867],
+          [102.76066001543363, 1.971698892806748]]]);
+
+var roi = sea.filter(ee.Filter.eq('COUNTRY','Thailand')).geometry();
+
+var opticaldens =  modis.filter(ee.Filter.date('2016-01-01', '2021-12-31'))
+                  .filter(ee.Filter.bounds(aoi));
+Map.addLayer(roi,{color:'RED'});
+Map.centerObject(roi);
+
+function maskmodis(image){ 
+  var aod = image.select('Optical_Depth_047')
+  return image.updateMask(Palm);}
+  
+var filtered_modis = opticaldens.map(maskmodis);
+
+function addAOD(image){
+  var aod_multi = image.multiply(0.001);
+  return image.addBands(aod_multi);
+}
+
+var withAOD = filtered_modis.map(addAOD);
+
+var chart = ui.Chart.image.series({
+  imageCollection :withAOD.select('Optical_Depth_047'),
+  region: aoi,
+  reducer: ee.Reducer.mean(),
+  scale: 250
+});
+
+print(chart);
