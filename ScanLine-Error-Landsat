@@ -1,0 +1,18 @@
+var L7_2010 = ee.Image('LANDSAT/LE07/C01/T1_TOA/LE07_121065_20100412');
+var img_fill = L7_2010.focal_mean(1, 'square','pixels',9);
+
+var Params = ({bands: ['B3', 'B2', 'B1'], 
+    min: 0, 
+    max: 0.5
+});
+var L7_Blend = img_fill.blend(L7_2010);
+
+Map.addLayer(img_fill, Params, 'Image Fill');
+Map.addLayer(L7_Blend, Params, 'L7 Fill Gaps');
+
+Export.image.toAsset({
+  image: L7_Blend,
+  description: 'L7 2010 Fill Gap',
+  scale: 30,
+  maxPixels: 1e13
+});
